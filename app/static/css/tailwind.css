@@ -592,8 +592,8 @@ video {
   position: static;
 }
 
-.inline {
-  display: inline;
+.m-2 {
+  margin: 0.5rem;
 }
 
 .flex {
@@ -604,8 +604,12 @@ video {
   justify-content: center;
 }
 
-.pb-1 {
-  padding-bottom: 0.25rem;
+.p-1 {
+  padding: 0.25rem;
+}
+
+.pb-2 {
+  padding-bottom: 0.5rem;
 }
 
 .pt-20 {
@@ -621,9 +625,8 @@ video {
   line-height: 1.75rem;
 }
 
-.text-rose-400 {
-  --tw-text-opacity: 1;
-  color: rgb(251 113 133 / var(--tw-text-opacity, 1));
+.font-semibold {
+  font-weight: 600;
 }
 
 /* Default Body Style */
@@ -689,9 +692,4 @@ video {
 .btn:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(29 78 216 / var(--tw-bg-opacity, 1));
-}
-
-.hover\:text-rose-700:hover {
-  --tw-text-opacity: 1;
-  color: rgb(190 18 60 / var(--tw-text-opacity, 1));
 }
