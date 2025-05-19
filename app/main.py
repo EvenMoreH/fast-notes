@@ -1,4 +1,5 @@
 from fasthtml.common import *
+from sqlite3 import *
 
 
 login_redirect = RedirectResponse("/login", status_code=303)
@@ -22,6 +23,46 @@ class LoginForm:
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin1"
 
+db = database("data/app.db")
+
+users = db.t.users
+if users not in db.t:
+    users.create(
+        dict(
+            id=int,
+            username=str,
+            password=str
+        ),
+        pk="username"
+    )
+
+if not any(user["username"] == "admin" for user in users()):
+    users.insert(username="admin", password="admin1")
+
+workouts = db.t.workouts
+if workouts not in db.t:
+    workouts.create(
+        {
+            "id": int,
+            "user_id": int,
+            "date": str,
+        },
+        pk="id"
+    )
+
+sets = db.t.sets
+if sets not in db.t:
+    sets.create(
+        {
+            "id": int,
+            "workout_id": int,
+            "exercise": str,    # e.g. "bench press"
+            "set": int,         # ordering within workout
+            "weight": float,    # kg or lbs
+            "reps": int,
+        },
+        pk="id"
+    )
 
 # for Docker
 # app, rt = fast_app(static_path="static")
@@ -30,7 +71,7 @@ ADMIN_PASS = "admin1"
 app, rt = fast_app(before=b4ware, static_path="app/static")
 
 default_header = Head(
-                    Title("Color Converter"),
+                    Title("Gym App"),
                     Meta(charset="UTF-8"),
                     Meta(name="viewport", content="width=device-width, initial-scale=1"),
                     Meta(name="description", content="insert page description for Search Engines"),
@@ -63,14 +104,20 @@ def get(session):
 @rt("/login")
 def get(session):
     session["auth"] = ""
+
+# print who is in database already for testing
+    for user in db.t.users():
+        print(user["username"])
+
     return Html(
         default_header,
         Body(
             H1("Login Page", cls="pt-20 pb-2 text-xl text-center font-semibold"),
             Div(
                 Form(
-                    Input(name="username", placeholder="  Username", cls="p-1 m-2"),
-                    Input(name="password", placeholder="  Password", cls="p-1 m-2"),
+                    Input(name="username", placeholder="  Username", cls="input1"),
+                    # obfuscate password field using type="password"
+                    Input(name="password", placeholder="  Password", type="password", cls="input1"),
                     Button("Login", type="submit", cls="btn"),
                     action="login", method="post",
                     cls="flex justify-center"
@@ -87,10 +134,23 @@ def get(session):
 def post(data: LoginForm, session):
     if data.username == ADMIN_USER and data.password == ADMIN_PASS:
         session["auth"] = data.username
+
         return RedirectResponse("/", status_code=303)
     else:
         return login_redirect
 
+
+# TODO:
+# - below code that checks if user with provided username is in DB already,
+#   if yes, it needs to prompt that such username exists and should not add user to DB
+#   if no user in DB and username is valid it should add user to DB
+
+@rt("/register")
+def get(data: LoginForm, session):
+    if not any(user["username"] == f"{data.username}" for user in users()):
+        users.insert(username=f"{data.username}", password=f"{data.password}")
+    else:
+        print(f"user with username {data.username} already exists!")
 
 serve()
 
