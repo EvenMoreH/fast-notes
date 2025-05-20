@@ -10,6 +10,7 @@ def user_auth(req, session):
 
 b4ware = Beforeware(user_auth, skip=[
     r"^/login$",             # exact match
+    r"^/register$",          # exact match
     r"^/static/.*",          # any file under /static/
     r"^/css/.*",             # # any file under /css/
     r"^/favicon\.ico$",      # literal favicon.ico
@@ -22,6 +23,8 @@ class LoginForm:
 
 ADMIN_USER = "admin"
 ADMIN_PASS = "admin1"
+# ADMIN_USER = "James"
+# ADMIN_PASS = "james1"
 
 db = database("data/app.db")
 
@@ -84,14 +87,14 @@ default_header = Head(
 
 
 @rt("/")
-def get(session):
+def get(session, req):
     current_user = session.get("auth")
     return Html(
         default_header,
         Body(
             H1("Homepage", cls="pt-20 pb-2 text-xl text-center font-semibold"),
             Div(
-                P(f"Hi! {current_user}"),
+                P(f"Hi! {current_user}", cls="font-bold"),
                 cls="flex justify-center"
             ),
             # whole body CSS
@@ -102,7 +105,7 @@ def get(session):
 
 
 @rt("/login")
-def get(session):
+def get(session, req):
     session["auth"] = ""
 
 # print who is in database already for testing
@@ -124,6 +127,11 @@ def get(session):
                 ),
                 cls="flex justify-center"
             ),
+            Div(
+                P("No account? Sign up below."),
+                # Button("Register account", type="submit", action="register", method="post", cls="btn")
+                A("Register account", href="/register", cls="btn")
+            ),
             # whole body CSS
             cls="body"
         ),
@@ -141,16 +149,52 @@ def post(data: LoginForm, session):
 
 
 # TODO:
-# - below code that checks if user with provided username is in DB already,
+# - below code (commented function) that checks if user with provided username is in DB already,
 #   if yes, it needs to prompt that such username exists and should not add user to DB
 #   if no user in DB and username is valid it should add user to DB
 
+# def add_user(data: LoginForm, session):
+#     if not any(user["username"] == f"{data.username}" for user in users()):
+#         users.insert(username=f"{data.username}", password=f"{data.password}")
+#     else:
+#         print(f"user with username {data.username} already exists!")
+
 @rt("/register")
-def get(data: LoginForm, session):
-    if not any(user["username"] == f"{data.username}" for user in users()):
-        users.insert(username=f"{data.username}", password=f"{data.password}")
+def get(session, req):
+    return Html(
+        default_header,
+        Body(
+            H1("Register Account", cls="pt-20 pb-2 text-xl text-center font-semibold"),
+            Form(
+                Input(name="username", placeholder="  Username", cls="input1"),
+                Input(name="password", placeholder="  Password", type="password", cls="input1"),
+                Input(name="rpassword", placeholder="  Repeat Password", type="password", cls="input1"),
+                Button("Register", hx_post="register", hx_target="#message1", hx_push_url="true", cls="btn"),
+                cls="flex justify-center",
+                id="signup",
+            ),
+            Div(id="message1"),
+            cls="body",
+        )
+    )
+
+@rt("/register")
+async def post(data: LoginForm, session, req):
+    form = await req.form()
+    password  = form["password"]
+    rpassword = form["rpassword"]
+
+    if password != rpassword:
+        return Div("Passwords do not match!", id="message1", hx_swap_oob=True)
+
+    if any(user["username"] == f"{data.username}" for user in users()):
+        return Div("Username taken!", id="message1", hx_swap_oob=True)
     else:
-        print(f"user with username {data.username} already exists!")
+        users.insert(username=f"{data.username}", password=f"{data.password}")
+        return Div(
+            "Sign up successful!",
+            A("Login", href="login", cls="btn"),
+            id="message1", hx_swap_oob=True)
 
 serve()
 
