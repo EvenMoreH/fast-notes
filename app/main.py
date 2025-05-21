@@ -1,5 +1,6 @@
 from fasthtml.common import *
 from sqlite3 import *
+from ksuid import ksuid
 
 
 login_redirect = RedirectResponse("/login", status_code=303)
@@ -32,7 +33,7 @@ users = db.t.users
 if users not in db.t:
     users.create(
         dict(
-            id=int,
+            id=str,
             username=str,
             password=str
         ),
@@ -40,32 +41,20 @@ if users not in db.t:
     )
 
 if not any(user["username"] == "admin" for user in users()):
-    users.insert(username="admin", password="admin1")
+    users.insert(id=str(ksuid()), username="admin", password="admin1")
 
-workouts = db.t.workouts
-if workouts not in db.t:
-    workouts.create(
+notes = db.t.notes
+if notes not in db.t:
+    notes.create(
         {
-            "id": int,
-            "user_id": int,
+            "id": str,
+            "user_id": str,
             "date": str,
+            "content": str,
         },
         pk="id"
     )
 
-sets = db.t.sets
-if sets not in db.t:
-    sets.create(
-        {
-            "id": int,
-            "workout_id": int,
-            "exercise": str,    # e.g. "bench press"
-            "set": int,         # ordering within workout
-            "weight": float,    # kg or lbs
-            "reps": int,
-        },
-        pk="id"
-    )
 
 # for Docker
 # app, rt = fast_app(static_path="static")
@@ -74,7 +63,7 @@ if sets not in db.t:
 app, rt = fast_app(before=b4ware, static_path="app/static")
 
 default_header = Head(
-                    Title("Gym App"),
+                    Title("Notes App"),
                     Meta(charset="UTF-8"),
                     Meta(name="viewport", content="width=device-width, initial-scale=1"),
                     Meta(name="description", content="insert page description for Search Engines"),
@@ -110,6 +99,7 @@ def get(session, req):
 
 # print who is in database already for testing
     for user in db.t.users():
+        print(user["id"])
         print(user["username"])
 
     return Html(
@@ -190,7 +180,7 @@ async def post(data: LoginForm, session, req):
     if any(user["username"] == f"{data.username}" for user in users()):
         return Div("Username taken!", id="message1", hx_swap_oob=True)
     else:
-        users.insert(username=f"{data.username}", password=f"{data.password}")
+        users.insert(id=str(ksuid()), username=f"{data.username}", password=f"{data.password}")
         return Div(
             "Sign up successful!",
             A("Login", href="login", cls="btn"),
